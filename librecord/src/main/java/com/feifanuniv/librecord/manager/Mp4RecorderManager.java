@@ -98,6 +98,10 @@ public class Mp4RecorderManager extends AbstractRecorderManager{
 
     }
 
+    @Override
+    public void resumeRecord(boolean isResume) {
+        mMuxer.setResumeRecord(isResume);
+    }
 
     @Override
     public void stopRecord() {

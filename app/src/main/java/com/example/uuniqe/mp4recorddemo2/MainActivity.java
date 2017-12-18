@@ -97,6 +97,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                     mCamManager.startPreview();
                     mExtAudioCapture.setOnAudioFrameCapturedListener(mOnAudioFrameCapturedListener);
                     mBtnPause.setText("暂停");
+                    mRecMp4.resumeRecord(true);
                 }
                 isPause = !isPause;
                 break;

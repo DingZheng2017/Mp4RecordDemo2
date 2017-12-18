@@ -25,9 +25,14 @@ public class MediaMuxerWrapper {
     private MediaFormat mVideoFormat;
     private MediaFormat mAudioFormat;
 
-    private boolean resumeRecord;
+
+    private boolean isResume;
     private long pauseTime;
     private long lastTrackTime;
+
+    public void setResumeRecord(boolean isResume) {
+        this.isResume = isResume;
+    }
 
     // 文件路径
     public MediaMuxerWrapper(String path) {
@@ -83,7 +88,13 @@ public class MediaMuxerWrapper {
                 throw new RuntimeException("muxer hasn't started");
             }
 
+            if (isResume){
+                isResume = false;
+                pauseTime += bufferInfo.presentationTimeUs - lastTrackTime;
+            }
 
+            lastTrackTime = bufferInfo.presentationTimeUs;
+            bufferInfo.presentationTimeUs -= pauseTime;
             outputBuffer.position(bufferInfo.offset);
             outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
 
@@ -110,6 +121,7 @@ public class MediaMuxerWrapper {
                     try {
                         mMuxer.stop();
                         mMuxer.release();
+                        pauseTime = 0;
                     } catch (IllegalStateException ex) {
                         ex.printStackTrace();
                     }

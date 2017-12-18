@@ -17,4 +17,6 @@ public abstract class AbstractRecorderManager {
 
     protected abstract void stopRecord();//停止
 
+    protected abstract void resumeRecord(boolean resume);//暂停状态恢复录播
+
 }
