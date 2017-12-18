@@ -11,9 +11,9 @@ public abstract class AbstractRecorderManager {
 
     protected abstract void startRecord();//开始
 
-    protected abstract void inputAudioFrame(byte[] audioBuf, int readBytes, long tsInNanoTime);//输入音频流
+    protected abstract void inputAudioFrame(byte[] audioBuf, int readBytes, long presentationTimeUs);//输入音频流
 
-    protected abstract void inputVideoFrame(byte[] videoBuf, long tsInNanoTime);//输入视频流
+    protected abstract void inputVideoFrame(byte[] videoBuf, long presentationTimeUs);//输入视频流
 
     protected abstract void stopRecord();//停止
 

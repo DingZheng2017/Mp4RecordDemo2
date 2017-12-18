@@ -11,8 +11,6 @@ import android.util.Log;
 
 import com.feifanuniv.librecord.bean.EncoderParams;
 import com.feifanuniv.librecord.manager.Mp4RecorderManager;
-import com.jiangdg.yuvosd.YuvUtils;
-
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -130,7 +128,6 @@ public class MediaVideoEncoder extends Thread {
         MediaFormat mFormat = MediaFormat.createVideoFormat(MIME_TYPE, mParams.getFrameWidth(), mParams.getFrameHeight());
         mFormat.setInteger(MediaFormat.KEY_BIT_RATE, getBitrate());
         mFormat.setInteger(MediaFormat.KEY_FRAME_RATE, getFrameRate());
-        android.util.Log.d("ysh","bitrate" +getBitrate());
         mFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mColorFormat);         // 颜色格式
         mFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, FRAME_INTERVAL);
         if (mVideoEncoder != null) {
@@ -153,39 +150,13 @@ public class MediaVideoEncoder extends Thread {
                 Log.d(TAG, "关闭视频编码器");
         }
     }
-    long millisPerframe = 1000 / 20;
-    long lastPush = 0;
+
 
     @TargetApi(21)
-    public void feedVideoEncoderData(byte[] data, long tsInNanoTime) {
-        if(!isEncoderStarted || mParamsRef == null) {
+    public void feedVideoEncoderData(byte[] data, long presentationTimeUs) {
+        if(! isEncoderStarted || mParamsRef == null) {
             return;
         }
-        try {
-            if (lastPush == 0) {
-                lastPush = System.currentTimeMillis();
-            }
-            long time = System.currentTimeMillis() - lastPush;
-            if (time >= 0) {
-                time = millisPerframe - time;
-                if (time > 0)
-                    Thread.sleep(time / 2);
-            }
-        EncoderParams mParams = mParamsRef.get();
-        int mWidth = mParams.getFrameWidth();
-        int mHeight = mParams.getFrameHeight();
-        byte[] resultBytes = new byte[mWidth* mHeight * 3 / 2];
-        YuvUtils.transferColorFormat(data,mWidth,mHeight,resultBytes,mColorFormat);
-        feedCodec(resultBytes, tsInNanoTime);
-            if (time > 0)
-                Thread.sleep(time / 2);
-            lastPush = System.currentTimeMillis();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void feedCodec(byte[] resultBytes, long tsInNanoTime) {
         ByteBuffer[] inputBuffers = mVideoEncoder.getInputBuffers();
         int inputBufferIndex = mVideoEncoder.dequeueInputBuffer(TIMES_OUT);
         if (inputBufferIndex >= 0) {
@@ -198,9 +169,9 @@ public class MediaVideoEncoder extends Thread {
             }
             // 向输入缓存区写入有效原始数据，并提交到编码器中进行编码处理
             inputBuffer.clear();
-            inputBuffer.put(resultBytes);
+            inputBuffer.put(data);
             inputBuffer.clear();
-            mVideoEncoder.queueInputBuffer(inputBufferIndex, 0, resultBytes.length, tsInNanoTime, MediaCodec.BUFFER_FLAG_KEY_FRAME);
+            mVideoEncoder.queueInputBuffer(inputBufferIndex, 0, data.length, presentationTimeUs, MediaCodec.BUFFER_FLAG_KEY_FRAME);
         }
     }
 

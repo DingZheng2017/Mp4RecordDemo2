@@ -53,7 +53,7 @@ public class MediaAudioEncoder extends Thread {
 
 
     @TargetApi(21)
-    public void feedAudioEncoderData(byte[] audioBuf, int readBytes, long tsInNanoTime) {
+    public void feedAudioEncoderData(byte[] audioBuf, int readBytes,long presentationTimeUs) {
         if(! isEncoderStarted || mParamsRef == null) {
             return;
         }
@@ -69,11 +69,11 @@ public class MediaAudioEncoder extends Thread {
             }
             // 向输入缓存区写入有效原始数据，并提交到编码器中进行编码处理
             if (audioBuf == null || readBytes <= 0) {
-                mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, 0, tsInNanoTime, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
             } else {
                 inputBuffer.clear();
                 inputBuffer.put(audioBuf);
-                mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, readBytes, tsInNanoTime, 0);
+                mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, readBytes, presentationTimeUs, 0);
             }
         }
     }

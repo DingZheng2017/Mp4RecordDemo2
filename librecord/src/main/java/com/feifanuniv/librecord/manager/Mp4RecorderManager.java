@@ -13,7 +13,7 @@ import java.io.File;
  *  Created by dingzheng on 17/12/17.
  */
 
-public class Mp4RecorderManager extends AbstractRecorderManager{
+public class Mp4RecorderManager extends AbstractRecorderManager {
     public static final boolean DEBUG = true;
     private static final String TAG = "Mp4RecordManager";
     private MediaAudioEncoder mediaAudioEncoder;
@@ -40,7 +40,6 @@ public class Mp4RecorderManager extends AbstractRecorderManager{
 
     }
 
-
     @Override
     public void startRecord() {
         if (mParams == null) {
@@ -52,8 +51,6 @@ public class Mp4RecorderManager extends AbstractRecorderManager{
         mediaAudioEncoder = new MediaAudioEncoder();
         String fullPath = getSaveFilePath(mParams.getVideoPath(),mParams.getVideoName());
 
-
-        android.util.Log.d("ysh","tempFile:   "+fullPath);
         mMuxer = new MediaMuxerWrapper(fullPath);
         if (mediaVideoEncoder != null) {
             mediaVideoEncoder.setMuxer(mMuxer, mParams);
@@ -70,7 +67,7 @@ public class Mp4RecorderManager extends AbstractRecorderManager{
         StringBuilder fullPath = new StringBuilder();
         fullPath.append(path);
         fullPath.append("/");
-        fullPath.append( System.currentTimeMillis());
+        fullPath.append(System.currentTimeMillis());
         fullPath.append(fileName);
         fullPath.append(".mp4");
 
@@ -82,18 +79,19 @@ public class Mp4RecorderManager extends AbstractRecorderManager{
         }
         return string;
     }
+
     @Override
-    public void inputAudioFrame(byte[] audioBuf, int readBytes,long tsInNanoTime) {
+    public void inputAudioFrame(byte[] audioBuf, int readBytes,long presentationTimeUs) {
         if (mediaAudioEncoder != null) {
-            mediaAudioEncoder.feedAudioEncoderData(audioBuf,readBytes,tsInNanoTime);
+            mediaAudioEncoder.feedAudioEncoderData(audioBuf,readBytes,presentationTimeUs);
         }
 
     }
 
     @Override
-    public void inputVideoFrame(byte[] viedoBuf,long tsInNanoTime) {
+    public void inputVideoFrame(byte[] viedoBuf,long presentationTimeUs) {
         if (mediaVideoEncoder != null) {
-            mediaVideoEncoder.feedVideoEncoderData(viedoBuf,tsInNanoTime);
+            mediaVideoEncoder.feedVideoEncoderData(viedoBuf,presentationTimeUs);
         }
 
     }
@@ -147,8 +145,4 @@ public class Mp4RecorderManager extends AbstractRecorderManager{
             }
         }
     }
-
-
-
-
 }

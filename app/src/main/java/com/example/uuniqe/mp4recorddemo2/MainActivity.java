@@ -3,6 +3,7 @@ package com.example.uuniqe.mp4recorddemo2;
 import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
+import android.media.MediaCodecInfo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.SurfaceHolder;
@@ -12,6 +13,7 @@ import android.widget.Button;
 
 import com.feifanuniv.librecord.bean.EncoderParams;
 import com.feifanuniv.librecord.manager.Mp4RecorderManager;
+import com.jiangdg.yuvosd.YuvUtils;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -150,6 +152,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         }
     };
 
+
+
+    long millisPerframe = 1000 / 20;
+    long lastPush = 0;
     // 预览数据处理
     private CameraManager.OnPreviewFrameResult mPreviewListener = new CameraManager.OnPreviewFrameResult() {
         @Override
@@ -164,8 +170,30 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
             // 处理3：yuv转换颜色格式，再编码
             if (mRecMp4 != null) {
+                //yuv转yuv420
+                try {
+                    if (lastPush == 0) {
+                        lastPush = System.currentTimeMillis();
+                    }
+                    long time = System.currentTimeMillis() - lastPush;
+                    if (time >= 0) {
+                        time = millisPerframe - time;
+                        if (time > 0)
+                            Thread.sleep(time / 2);
+                    }
+                 //hard code,just for test
+                    int mWidth = 1280;
+                    int mHeight = 720;
+                    byte[] resultBytes = new byte[mWidth* mHeight * 3 / 2];
+                    YuvUtils.transferColorFormat(data,mWidth,mHeight,resultBytes, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
+                    mRecMp4.inputVideoFrame(resultBytes, System.nanoTime() / 1000);
+                    if (time > 0)
+                        Thread.sleep(time / 2);
+                    lastPush = System.currentTimeMillis();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
 
-                mRecMp4.inputVideoFrame(data, System.nanoTime() / 1000);
             }
             mCamManager.getCameraIntance().addCallbackBuffer(data);
         }

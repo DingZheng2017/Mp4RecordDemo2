@@ -3,8 +3,6 @@ package com.feifanuniv.librecord.bean;
 import android.media.AudioFormat;
 import android.media.MediaRecorder;
 
-import com.feifanuniv.librecord.encoder.MediaVideoEncoder;
-
 /**
  * 音、视频编码参数
  * Created by dingzheng on 17/12/17.
@@ -28,12 +26,12 @@ public class EncoderParams {
 
     /*视频部分*/
     /**
-     * 默认图像宽度 1280
+     * 默认图像宽度
      */
     public static final int DEFAULT_PREVIEW_WIDTH = 1280;
 
     /**
-     * 默认图像高度 720
+     * 默认图像高度
      */
     public static final int DEFAULT_PREVIEW_HEIGHT = 720;
 

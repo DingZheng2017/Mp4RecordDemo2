@@ -25,7 +25,6 @@ public class MediaMuxerWrapper {
     private MediaFormat mVideoFormat;
     private MediaFormat mAudioFormat;
 
-
     private boolean isResume;
     private long pauseTime;
     private long lastTrackTime;
@@ -101,7 +100,6 @@ public class MediaMuxerWrapper {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 mMuxer.writeSampleData(isVideo ? mVideoTrackIndex : mAudioTrackIndex, outputBuffer, bufferInfo);
             }
-
             if (Mp4RecorderManager.DEBUG)
                 Log.d(TAG, String.format("sent %s [" + bufferInfo.size + "] with timestamp:[%d] to muxer", isVideo ? "video" : "audio", bufferInfo.presentationTimeUs / 1000));
         }
