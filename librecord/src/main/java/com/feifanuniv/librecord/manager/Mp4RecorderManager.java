@@ -1,11 +1,10 @@
 package com.feifanuniv.librecord.manager;
 
-import android.util.Log;
-
 import com.feifanuniv.librecord.bean.EncoderParams;
 import com.feifanuniv.librecord.encoder.MediaAudioEncoder;
 import com.feifanuniv.librecord.encoder.MediaMuxerWrapper;
 import com.feifanuniv.librecord.encoder.MediaVideoEncoder;
+import com.feifanuniv.librecord.utils.LogUtils;
 
 import java.io.File;
 
@@ -14,14 +13,12 @@ import java.io.File;
  */
 
 public class Mp4RecorderManager extends AbstractRecorderManager {
-    public static final boolean DEBUG = true;
     private static final String TAG = "Mp4RecordManager";
     private MediaAudioEncoder mediaAudioEncoder;
     private MediaVideoEncoder mediaVideoEncoder;
     private MediaMuxerWrapper mMuxer;
     private EncoderParams mParams;
     private static Mp4RecorderManager mRecMp4;
-
 
     private Mp4RecorderManager() {
     }
@@ -33,6 +30,9 @@ public class Mp4RecorderManager extends AbstractRecorderManager {
         return mRecMp4;
     }
 
+    public static void setLogEnable(boolean logEnable) {
+        LogUtils.setLogEnable(logEnable);
+    }
 
     @Override
     public void initRecordProfile(EncoderParams mParams) {
@@ -107,8 +107,7 @@ public class Mp4RecorderManager extends AbstractRecorderManager {
         if (mMuxer != null) {
             mMuxer.release();
             mMuxer = null;
-            if (Mp4RecorderManager.DEBUG)
-                Log.i(TAG, TAG + "---->停止本地录制");
+            LogUtils.i(TAG, TAG + "---->停止本地录制");
         }
         if (mediaVideoEncoder != null) {
             mediaVideoEncoder.setMuxer(null, null);
@@ -127,7 +126,7 @@ public class Mp4RecorderManager extends AbstractRecorderManager {
                     t2.join();
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LogUtils.e(TAG,"Video Encoder InterruptedException ",e);
             }
         }
         // 停止音频编码线程
@@ -141,7 +140,7 @@ public class Mp4RecorderManager extends AbstractRecorderManager {
                     t1.join();
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LogUtils.e(TAG,"Audio Encoder InterruptedException ",e);
             }
         }
     }

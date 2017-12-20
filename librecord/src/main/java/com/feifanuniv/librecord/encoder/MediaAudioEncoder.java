@@ -9,10 +9,9 @@ import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
 import android.os.Process;
-import android.util.Log;
 
 import com.feifanuniv.librecord.bean.EncoderParams;
-import com.feifanuniv.librecord.manager.Mp4RecorderManager;
+import com.feifanuniv.librecord.utils.LogUtils;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -86,7 +85,7 @@ public class MediaAudioEncoder extends Thread {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LogUtils.e(TAG,"初始化audio 编码器失败",e);
             }
             startCodec();
         }
@@ -110,8 +109,7 @@ public class MediaAudioEncoder extends Thread {
         do {
             outputBufferIndex = mAudioEncoder.dequeueOutputBuffer(mBufferInfo, TIMES_OUT);
             if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                if (Mp4RecorderManager.DEBUG)
-                    Log.i(TAG, "获得编码器输出缓存区超时");
+                    LogUtils.i(TAG, "获得编码器输出缓存区超时");
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 // 如果API小于21，APP需要重新绑定编码器的输入缓存区；
                 // 如果API大于21，则无需处理INFO_OUTPUT_BUFFERS_CHANGED
@@ -121,8 +119,7 @@ public class MediaAudioEncoder extends Thread {
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 // 编码器输出缓存区格式改变，通常在存储数据之前且只会改变一次
                 // 这里设置混合器视频轨道，如果音频已经添加则启动混合器（保证音视频同步）
-                if (Mp4RecorderManager.DEBUG)
-                    Log.i(TAG, "编码器输出缓存区格式改变，添加视频轨道到混合器");
+                    LogUtils.i(TAG, "编码器输出缓存区格式改变，添加视频轨道到混合器");
                 synchronized (MediaAudioEncoder.this) {
                     newFormat = mAudioEncoder.getOutputFormat();
                     if (mMuxerRef != null) {
@@ -135,14 +132,12 @@ public class MediaAudioEncoder extends Thread {
             } else {
                 // 当flag属性置为BUFFER_FLAG_CODEC_CONFIG后，说明输出缓存区的数据已经被消费了
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
-                    if (Mp4RecorderManager.DEBUG)
-                        Log.i(TAG, "编码数据被消费，BufferInfo的size属性置0");
+                        LogUtils.i(TAG, "编码数据被消费，BufferInfo的size属性置0");
                     mBufferInfo.size = 0;
                 }
                 // 数据流结束标志，结束本次循环
                 if ((mBufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                    if (Mp4RecorderManager.DEBUG)
-                        Log.i(TAG, "数据流结束，退出循环");
+                        LogUtils.i(TAG, "数据流结束，退出循环");
                     break;
                 }
                 // 获取一个只读的输出缓存区inputBuffer ，它包含被编码好的数据
@@ -167,7 +162,7 @@ public class MediaAudioEncoder extends Thread {
                     if (mMuxerRef != null) {
                         MediaMuxerWrapper muxer = mMuxerRef.get();
                         if (muxer != null) {
-                            Log.i(TAG, "------编码混合音频数据-----" + mBufferInfo.size);
+                            LogUtils.i(TAG, "------编码混合音频数据-----" + mBufferInfo.size);
                             muxer.pumpStream(outputBuffer, mBufferInfo, false);
                         }
                     }
@@ -188,9 +183,7 @@ public class MediaAudioEncoder extends Thread {
         try {
             mAudioEncoder = MediaCodec.createByCodecName(mCodecInfo.getName());
         } catch (IOException e) {
-            if (Mp4RecorderManager.DEBUG)
-                Log.e(TAG, "创建编码器失败" + e.getMessage());
-            e.printStackTrace();
+                LogUtils.e(TAG, "创建编码器失败" + e.getMessage());
         }
         // 告诉编码器输出数据的格式,如MIME类型、码率、采样率、通道数量等
         EncoderParams mParams = mParamsRef.get();

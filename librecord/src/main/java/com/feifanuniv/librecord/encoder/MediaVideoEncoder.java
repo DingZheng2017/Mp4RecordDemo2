@@ -7,10 +7,9 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
-import android.util.Log;
 
 import com.feifanuniv.librecord.bean.EncoderParams;
-import com.feifanuniv.librecord.manager.Mp4RecorderManager;
+import com.feifanuniv.librecord.utils.LogUtils;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -114,16 +113,13 @@ public class MediaVideoEncoder extends Thread {
         try {
             MediaCodecInfo mCodecInfo = selectSupportCodec(MIME_TYPE);
             if (mCodecInfo == null) {
-                if (Mp4RecorderManager.DEBUG)
-                    Log.d(TAG, "匹配编码器失败" + MIME_TYPE);
+                LogUtils.d(TAG, "匹配编码器失败" + MIME_TYPE);
                 return;
             }
             mColorFormat = selectSupportColorFormat(mCodecInfo, MIME_TYPE);
             mVideoEncoder = MediaCodec.createByCodecName(mCodecInfo.getName());
         } catch (IOException e) {
-            if (Mp4RecorderManager.DEBUG)
-                Log.e(TAG, "创建编码器失败" + e.getMessage());
-            e.printStackTrace();
+            LogUtils.e(TAG, "创建编码器失败" + e.getMessage());
         }
         MediaFormat mFormat = MediaFormat.createVideoFormat(MIME_TYPE, mParams.getFrameWidth(), mParams.getFrameHeight());
         mFormat.setInteger(MediaFormat.KEY_BIT_RATE, getBitrate());
@@ -134,8 +130,7 @@ public class MediaVideoEncoder extends Thread {
             mVideoEncoder.configure(mFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mVideoEncoder.start();
             isEncoderStarted = true;
-            if (Mp4RecorderManager.DEBUG)
-                Log.d(TAG, "配置、启动视频编码器");
+            LogUtils.d(TAG, "配置、启动视频编码器");
         }
     }
 
@@ -146,8 +141,7 @@ public class MediaVideoEncoder extends Thread {
             mVideoEncoder = null;
             isAddKeyFrame = false;
             isEncoderStarted = false;
-            if (Mp4RecorderManager.DEBUG)
-                Log.d(TAG, "关闭视频编码器");
+            LogUtils.d(TAG, "关闭视频编码器");
         }
     }
 
@@ -184,7 +178,7 @@ public class MediaVideoEncoder extends Thread {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LogUtils.e(TAG,"初始化video编码器失败",e);
             }
             startCodec();
         }
@@ -208,8 +202,7 @@ public class MediaVideoEncoder extends Thread {
         do {
             outputBufferIndex = mVideoEncoder.dequeueOutputBuffer(mBufferInfo, TIMES_OUT);
             if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                if (Mp4RecorderManager.DEBUG)
-                    Log.i(TAG, "获得编码器输出缓存区超时");
+                LogUtils.i(TAG, "获得编码器输出缓存区超时");
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 // 如果API小于21，APP需要重新绑定编码器的输入缓存区；
                 // 如果API大于21，则无需处理INFO_OUTPUT_BUFFERS_CHANGED
@@ -228,8 +221,7 @@ public class MediaVideoEncoder extends Thread {
                         }
                     }
                 }
-                if (Mp4RecorderManager.DEBUG)
-                    Log.i(TAG, "编码器输出缓存区格式改变，添加视频轨道到混合器");
+                    LogUtils.i(TAG, "编码器输出缓存区格式改变，添加视频轨道到混合器");
             } else {
                 // 获取一个只读的输出缓存区inputBuffer ，它包含被编码好的数据
                 ByteBuffer outputBuffer = null;
@@ -246,11 +238,9 @@ public class MediaVideoEncoder extends Thread {
                 }
                 // 根据NALU类型判断帧类型
                 int type = outputBuffer.get(4) & 0x1F;
-                if (Mp4RecorderManager.DEBUG)
-                    Log.d(TAG, "------还有数据---->" + type);
+                    LogUtils.d(TAG, "------还有数据---->" + type);
                 if (type == 7 || type == 8) {
-                    if (Mp4RecorderManager.DEBUG)
-                        Log.e(TAG, "------PPS、SPS帧(非图像数据)，忽略-------");
+                    LogUtils.e(TAG, "------PPS、SPS帧(非图像数据)，忽略-------");
                     mBufferInfo.size = 0;
                 } else if (type == 5) {
                     // 录像时，第1秒画面会静止，这是由于音视轨没有完全被添加
@@ -259,7 +249,7 @@ public class MediaVideoEncoder extends Thread {
                     if (mMuxerRef != null) {
                         MediaMuxerWrapper muxer = mMuxerRef.get();
                         if (muxer != null) {
-                            Log.i(TAG, "------编码混合  视频关键帧数据-----");
+                            LogUtils.i(TAG, "------编码混合  视频关键帧数据-----");
                             muxer.pumpStream(outputBuffer, mBufferInfo, true);
                         }
                         isAddKeyFrame = true;
@@ -270,7 +260,7 @@ public class MediaVideoEncoder extends Thread {
                         if (isAddKeyFrame && mMuxerRef != null) {
                             MediaMuxerWrapper muxer = mMuxerRef.get();
                             if (muxer != null) {
-                                Log.i(TAG, "------编码混合  视频普通帧数据-----" + mBufferInfo.size);
+                                LogUtils.i(TAG, "------编码混合  视频普通帧数据-----" + mBufferInfo.size);
                                 muxer.pumpStream(outputBuffer, mBufferInfo, true);
                             }
                         }

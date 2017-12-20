@@ -4,9 +4,8 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.os.Build;
-import android.util.Log;
 
-import com.feifanuniv.librecord.manager.Mp4RecorderManager;
+import com.feifanuniv.librecord.utils.LogUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,7 +41,7 @@ public class MediaMuxerWrapper {
                 mux = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LogUtils.e(TAG,"创建muxer失败",e);
         } finally {
             mMuxer = (MediaMuxer) mux;
         }
@@ -55,14 +54,12 @@ public class MediaMuxerWrapper {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             int track = mMuxer.addTrack(format);
-            if (Mp4RecorderManager.DEBUG)
-                Log.i(TAG, String.format("addTrack %s result %d", isVideo ? "video" : "audio", track));
+            LogUtils.i(TAG, String.format("addTrack %s result %d", isVideo ? "video" : "audio", track));
             if (isVideo) {
                 mVideoFormat = format;
                 mVideoTrackIndex = track;
                 if (mAudioTrackIndex != -1) {
-                    if (Mp4RecorderManager.DEBUG)
-                        Log.i(TAG, "both audio and video added,and muxer is started");
+                    LogUtils.i(TAG, "both audio and video added,and muxer is started");
                     mMuxer.start();
                 }
             } else {
@@ -100,13 +97,11 @@ public class MediaMuxerWrapper {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 mMuxer.writeSampleData(isVideo ? mVideoTrackIndex : mAudioTrackIndex, outputBuffer, bufferInfo);
             }
-            if (Mp4RecorderManager.DEBUG)
-                Log.d(TAG, String.format("sent %s [" + bufferInfo.size + "] with timestamp:[%d] to muxer", isVideo ? "video" : "audio", bufferInfo.presentationTimeUs / 1000));
+                LogUtils.d(TAG, String.format("sent %s [" + bufferInfo.size + "] with timestamp:[%d] to muxer", isVideo ? "video" : "audio", bufferInfo.presentationTimeUs / 1000));
         }
 
         if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-            if (Mp4RecorderManager.DEBUG)
-                Log.i(TAG, "BUFFER_FLAG_END_OF_STREAM received");
+                LogUtils.i(TAG, "BUFFER_FLAG_END_OF_STREAM received");
         }
     }
 
@@ -114,20 +109,18 @@ public class MediaMuxerWrapper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             if (mMuxer != null) {
                 if (mAudioTrackIndex != -1 && mVideoTrackIndex != -1) {
-                    if (Mp4RecorderManager.DEBUG)
-                        Log.i(TAG, String.format("muxer is started. now it will be stoped."));
+                    LogUtils.i(TAG, String.format("muxer is started. now it will be stoped."));
                     try {
                         mMuxer.stop();
                         mMuxer.release();
                         pauseTime = 0;
                     } catch (IllegalStateException ex) {
-                        ex.printStackTrace();
+                        LogUtils.e(TAG, String.format("muxer is started. now it will be stoped."),ex);
                     }
 
                     mAudioTrackIndex = mVideoTrackIndex = -1;
                 } else {
-                    if (Mp4RecorderManager.DEBUG)
-                        Log.i(TAG, String.format("muxer is failed to be stoped."));
+                        LogUtils.i(TAG, String.format("muxer is failed to be stoped."));
                 }
             }
         }
