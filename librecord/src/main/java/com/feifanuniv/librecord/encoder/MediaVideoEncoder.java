@@ -9,6 +9,8 @@ import android.media.MediaFormat;
 import android.os.Build;
 
 import com.feifanuniv.librecord.bean.EncoderParams;
+import com.feifanuniv.librecord.bean.RecordStatus;
+import com.feifanuniv.librecord.manager.Mp4RecorderManager;
 import com.feifanuniv.librecord.utils.LogUtils;
 
 import java.io.IOException;
@@ -39,6 +41,10 @@ public class MediaVideoEncoder extends Thread {
     private MediaFormat newFormat;
     private WeakReference<MediaMuxerWrapper> mMuxerRef;
 
+
+
+    private Mp4RecorderManager.RecordResultHandler videoResultHandler;
+
     public synchronized void setMuxer(MediaMuxerWrapper mMuxer, EncoderParams mParams) {
         this.mMuxerRef = new WeakReference<>(mMuxer);
         this.mParamsRef = new WeakReference<>(mParams);
@@ -49,6 +55,9 @@ public class MediaVideoEncoder extends Thread {
         }
     }
 
+    public void setVideoResultHandler(Mp4RecorderManager.RecordResultHandler videoResultHandler) {
+        this.videoResultHandler = videoResultHandler;
+    }
     private int getFrameRate() {
         if (mParamsRef == null)
             return -1;
@@ -68,37 +77,37 @@ public class MediaVideoEncoder extends Thread {
         if (mWidth >= 1920 || mHeight >= 1920) {
             switch (mParams.getBitRateQuality()) {
                 case LOW:
-                    bitRate *= 0.75;// 4354Kbps
+                    bitRate *= 0.75;
                     break;
                 case MIDDLE:
-                    bitRate *= 1.1;// 6386Kbps
+                    bitRate *= 1.1;
                     break;
                 case HIGH:
-                    bitRate *= 1.5;// 8709Kbps
+                    bitRate *= 1.5;
                     break;
             }
         } else if (mWidth >= 1280 || mHeight >= 1280) {
             switch (mParams.getBitRateQuality()) {
                 case LOW:
-                    bitRate *= 0.7;// 2580Kbps
+                    bitRate *= 0.7;
                     break;
                 case MIDDLE:
-                    bitRate *= 1.4;// 3612Kbps
+                    bitRate *= 1.4;
                     break;
                 case HIGH:
-                    bitRate *= 1.9;// 4902Kbps
+                    bitRate *= 1.9;
                     break;
             }
         } else if (mWidth >= 640 || mHeight >= 640) {
             switch (mParams.getBitRateQuality()) {
                 case LOW:
-                    bitRate *= 1.4;// 1204Kbps
+                    bitRate *= 1.4;
                     break;
                 case MIDDLE:
-                    bitRate *= 2.1;// 1806Kbps
+                    bitRate *= 2.1;
                     break;
                 case HIGH:
-                    bitRate *= 3;// 2580Kbps
+                    bitRate *= 3;
                     break;
             }
         }
@@ -113,10 +122,14 @@ public class MediaVideoEncoder extends Thread {
         try {
             MediaCodecInfo mCodecInfo = selectSupportCodec(MIME_TYPE);
             if (mCodecInfo == null) {
+                if(videoResultHandler != null) {
+                    videoResultHandler.onRecordStatusChange(RecordStatus.ERROR_VIDEO_ENCODER);
+                }
                 LogUtils.d(TAG, "匹配编码器失败" + MIME_TYPE);
+
                 return;
             }
-            mColorFormat = selectSupportColorFormat(mCodecInfo, MIME_TYPE);
+          //  mColorFormat = selectSupportColorFormat(mCodecInfo, MIME_TYPE);
             mVideoEncoder = MediaCodec.createByCodecName(mCodecInfo.getName());
         } catch (IOException e) {
             LogUtils.e(TAG, "创建编码器失败" + e.getMessage());
@@ -124,7 +137,8 @@ public class MediaVideoEncoder extends Thread {
         MediaFormat mFormat = MediaFormat.createVideoFormat(MIME_TYPE, mParams.getFrameWidth(), mParams.getFrameHeight());
         mFormat.setInteger(MediaFormat.KEY_BIT_RATE, getBitrate());
         mFormat.setInteger(MediaFormat.KEY_FRAME_RATE, getFrameRate());
-        mFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mColorFormat);         // 颜色格式
+
+        mFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);// 颜色格式
         mFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, FRAME_INTERVAL);
         if (mVideoEncoder != null) {
             mVideoEncoder.configure(mFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
@@ -178,7 +192,7 @@ public class MediaVideoEncoder extends Thread {
             try {
                 Thread.sleep(200);
             } catch (InterruptedException e) {
-                LogUtils.e(TAG,"初始化video编码器失败",e);
+                LogUtils.e("初始化video编码器失败",e);
             }
             startCodec();
         }
@@ -206,9 +220,10 @@ public class MediaVideoEncoder extends Thread {
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                 // 如果API小于21，APP需要重新绑定编码器的输入缓存区；
                 // 如果API大于21，则无需处理INFO_OUTPUT_BUFFERS_CHANGED
-                if (!isLollipop()) {
-                    outputBuffers = mVideoEncoder.getOutputBuffers();
-                }
+//                if (!isLollipop()) {
+//                    outputBuffers = mVideoEncoder.getOutputBuffers();
+//                }
+                outputBuffers = mVideoEncoder.getOutputBuffers();
             } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 // 编码器输出缓存区格式改变，通常在存储数据之前且只会改变一次
                 // 这里设置混合器视频轨道，如果音频已经添加则启动混合器（保证音视频同步）
@@ -238,7 +253,7 @@ public class MediaVideoEncoder extends Thread {
                 }
                 // 根据NALU类型判断帧类型
                 int type = outputBuffer.get(4) & 0x1F;
-                    LogUtils.d(TAG, "------还有数据---->" + type);
+                    LogUtils.d("yshnmb", "------还有数据---->" + type);
                 if (type == 7 || type == 8) {
                     LogUtils.e(TAG, "------PPS、SPS帧(非图像数据)，忽略-------");
                     mBufferInfo.size = 0;
@@ -250,6 +265,7 @@ public class MediaVideoEncoder extends Thread {
                         MediaMuxerWrapper muxer = mMuxerRef.get();
                         if (muxer != null) {
                             LogUtils.i(TAG, "------编码混合  视频关键帧数据-----");
+                            android.util.Log.d("yshaaa","video：偏移量  "+mBufferInfo.offset +"大小: "+mBufferInfo.size+" pts: "+mBufferInfo.presentationTimeUs);
                             muxer.pumpStream(outputBuffer, mBufferInfo, true);
                         }
                         isAddKeyFrame = true;
@@ -261,6 +277,7 @@ public class MediaVideoEncoder extends Thread {
                             MediaMuxerWrapper muxer = mMuxerRef.get();
                             if (muxer != null) {
                                 LogUtils.i(TAG, "------编码混合  视频普通帧数据-----" + mBufferInfo.size);
+                                android.util.Log.d("yshbuffer","mBufferInfo信息：偏移量  "+mBufferInfo.offset +"大小: "+mBufferInfo.size+" pts: "+mBufferInfo.presentationTimeUs);
                                 muxer.pumpStream(outputBuffer, mBufferInfo, true);
                             }
                         }
@@ -292,7 +309,14 @@ public class MediaVideoEncoder extends Thread {
             String[] types = codecInfo.getSupportedTypes();
             for (int j = 0; j < types.length; j++) {
                 if (types[j].equalsIgnoreCase(mimeType)) {
-                    return codecInfo;
+                    //判断当前codec是否支持yuv420p的颜色格式
+                    int mColorFormat = selectSupportColorFormat(codecInfo, MIME_TYPE);
+
+                    if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) {
+                        android.util.Log.d("yshaaa","支持420p:-->  "+codecInfo.getName());
+                        return codecInfo;
+
+                    }
                 }
             }
         }

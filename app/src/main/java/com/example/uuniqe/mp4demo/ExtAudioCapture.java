@@ -1,4 +1,4 @@
-package com.example.uuniqe.mp4recorddemo2;
+package com.example.uuniqe.mp4demo;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;

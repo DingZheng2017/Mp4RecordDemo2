@@ -24,12 +24,25 @@ public class MediaMuxerWrapper {
     private MediaFormat mVideoFormat;
     private MediaFormat mAudioFormat;
 
-    private boolean isResume;
+    private long intervalTime;
+    private long resumeTime;
     private long pauseTime;
-    private long lastTrackTime;
+    private long videoLastRecordTime;
+    private long audioLastRecordTime;
+    private long tempPTS;
+    private boolean isPause;
 
-    public void setResumeRecord(boolean isResume) {
-        this.isResume = isResume;
+    public void resume() {
+        if (isPause) {
+            resumeTime = System.nanoTime() / 1000;
+            intervalTime += (resumeTime - pauseTime);
+            isPause = false;
+        }
+    }
+
+    public void pause() {
+        isPause = true;
+        pauseTime = System.nanoTime() / 1000;
     }
 
     // 文件路径
@@ -41,7 +54,7 @@ public class MediaMuxerWrapper {
                 mux = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
             }
         } catch (IOException e) {
-            LogUtils.e(TAG,"创建muxer失败",e);
+            LogUtils.e(TAG, "创建muxer失败", e);
         } finally {
             mMuxer = (MediaMuxer) mux;
         }
@@ -84,24 +97,30 @@ public class MediaMuxerWrapper {
                 throw new RuntimeException("muxer hasn't started");
             }
 
-            if (isResume){
-                isResume = false;
-                pauseTime += bufferInfo.presentationTimeUs - lastTrackTime;
+            tempPTS = bufferInfo.presentationTimeUs - intervalTime;
+            if (isVideo) {
+                if (tempPTS > videoLastRecordTime) {
+                    bufferInfo.presentationTimeUs = tempPTS;
+                }
+                videoLastRecordTime = bufferInfo.presentationTimeUs;
+            } else {
+                if (tempPTS > audioLastRecordTime) {
+                    bufferInfo.presentationTimeUs = tempPTS;
+                }
+                audioLastRecordTime = bufferInfo.presentationTimeUs;
             }
 
-            lastTrackTime = bufferInfo.presentationTimeUs;
-            bufferInfo.presentationTimeUs -= pauseTime;
             outputBuffer.position(bufferInfo.offset);
             outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 mMuxer.writeSampleData(isVideo ? mVideoTrackIndex : mAudioTrackIndex, outputBuffer, bufferInfo);
             }
-                LogUtils.d(TAG, String.format("sent %s [" + bufferInfo.size + "] with timestamp:[%d] to muxer", isVideo ? "video" : "audio", bufferInfo.presentationTimeUs / 1000));
+            LogUtils.d(TAG, String.format("sent %s [" + bufferInfo.size + "] with timestamp:[%d] to muxer", isVideo ? "video" : "audio", bufferInfo.presentationTimeUs / 1000));
         }
 
         if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                LogUtils.i(TAG, "BUFFER_FLAG_END_OF_STREAM received");
+            LogUtils.i(TAG, "BUFFER_FLAG_END_OF_STREAM received");
         }
     }
 
@@ -115,12 +134,12 @@ public class MediaMuxerWrapper {
                         mMuxer.release();
                         pauseTime = 0;
                     } catch (IllegalStateException ex) {
-                        LogUtils.e(TAG, String.format("muxer is started. now it will be stoped."),ex);
+                        LogUtils.e(TAG, String.format("muxer is started. now it will be stoped."), ex);
                     }
 
                     mAudioTrackIndex = mVideoTrackIndex = -1;
                 } else {
-                        LogUtils.i(TAG, String.format("muxer is failed to be stoped."));
+                    LogUtils.i(TAG, String.format("muxer is failed to be stoped."));
                 }
             }
         }

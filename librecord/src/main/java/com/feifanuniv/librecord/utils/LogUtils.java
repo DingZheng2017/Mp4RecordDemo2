@@ -7,7 +7,7 @@ import android.util.Log;
  */
 
 public class LogUtils {
-    private static final String TAG = "MP4RECORDLOG";
+    private static final String TAG = "LOGUTIL";
     private static boolean LOG_ENABLE = true;
 
     /**

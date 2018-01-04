@@ -1,6 +1,8 @@
-package com.example.uuniqe.mp4recorddemo2;
+package com.example.uuniqe.mp4demo;
 
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
 import android.media.MediaCodecInfo;
@@ -34,12 +36,15 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     private boolean isPause;
     private Mp4RecorderManager mRecMp4;
     private CameraManager mCamManager;
-    public static final String ROOT_PATH = Environment.getExternalStorageDirectory()
-            .getAbsolutePath();
+    public static final String ROOT_PATH = Environment.getExternalStorageDirectory() + "/QSJSCache/";
     private EncoderParams encoderParams;
 
     private ExtAudioCapture mExtAudioCapture;
     private static final int AUDIO_BUFFER_SIZE = 1024;
+
+    PendingIntent pi;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +61,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
         mExtAudioCapture = new ExtAudioCapture();
 
+        //
+        Intent intent = new Intent("ELITOR_CLOCK");
+        intent.putExtra("msg","提醒存储");
+        pi = PendingIntent.getBroadcast(this,0,intent,0);
+
+
     }
 
     @Override
@@ -71,7 +82,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
             case R.id.main_record_btn:
                 if (!isRecording) {
                     // 2. 配置参数
-                    encoderParams = new EncoderParams(ROOT_PATH + "/0001", "aa");
+                    encoderParams = new EncoderParams(ROOT_PATH + "/Record", "6666");
                     mRecMp4.initRecordProfile(encoderParams);
 
                     mExtAudioCapture.startCapture();
@@ -79,9 +90,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 
                     // 3. 开始录制
                     mRecMp4.startRecord();
+                    //开启定时器-------------------------------------------------------------------------------
+
+                    AlarmUtil.setAlarmTime(this, System.currentTimeMillis(), "ELITOR_CLOCK", 15);
+
                     mBtnRecord.setText("停止录像");
                 } else {
                     // 4. 停止录制
+
+                    //关闭定时器
+                    AlarmUtil.canalAlarm(this,"ELITOR_CLOCK");
+
                     mRecMp4.stopRecord();
                     mBtnRecord.setText("开始录像");
                 }
@@ -92,14 +111,14 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                     //暂停camera和audio
                     mCamManager.stopPreivew();
                     mExtAudioCapture.setOnAudioFrameCapturedListener(null);
-
                     mBtnPause.setText("继续");
+                  //  mRecMp4.pause();
                 } else {
                     //恢复cameraz和audio
                     mCamManager.startPreview();
                     mExtAudioCapture.setOnAudioFrameCapturedListener(mOnAudioFrameCapturedListener);
                     mBtnPause.setText("暂停");
-                    mRecMp4.resumeRecord(true);
+               //     mRecMp4.resume();
                 }
                 isPause = !isPause;
                 break;
@@ -147,6 +166,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
         @Override
         public void onAudioFrameCaptured(byte[] audioData, int size) {
             long timestamp = System.nanoTime() / 1000;
+            android.util.Log.d("yshtime","原始音频时间:  "+timestamp);
             if (mRecMp4 != null)
                 mRecMp4.inputAudioFrame(audioData, size, timestamp);
         }
@@ -185,8 +205,18 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
                     int mWidth = 1280;
                     int mHeight = 720;
                     byte[] resultBytes = new byte[mWidth* mHeight * 3 / 2];
+//                    if(RomUtil.isSmartisan()){
+//                        android.util.Log.d("yshrom","是锤子");
+//                    }
+//                    if (RomUtil.isFlyme()){
+//
+//                            android.util.Log.d("yshrom","是小米");
+//
+//                    }
                     YuvUtils.transferColorFormat(data,mWidth,mHeight,resultBytes, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
-                    mRecMp4.inputVideoFrame(resultBytes, System.nanoTime() / 1000);
+                    long timestamp1 = System.nanoTime() / 1000;
+                    android.util.Log.d("yshtime","原始视频时间:  "+timestamp1);
+                    mRecMp4.inputVideoFrame(resultBytes, timestamp1);
                     if (time > 0)
                         Thread.sleep(time / 2);
                     lastPush = System.currentTimeMillis();

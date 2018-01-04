@@ -8,7 +8,6 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
-import android.os.Process;
 
 import com.feifanuniv.librecord.bean.EncoderParams;
 import com.feifanuniv.librecord.utils.LogUtils;
@@ -163,6 +162,7 @@ public class MediaAudioEncoder extends Thread {
                         MediaMuxerWrapper muxer = mMuxerRef.get();
                         if (muxer != null) {
                             LogUtils.i(TAG, "------编码混合音频数据-----" + mBufferInfo.size);
+                            android.util.Log.d("yshaaa","Audio信息：偏移量  "+mBufferInfo.offset +"大小: "+mBufferInfo.size+" pts: "+mBufferInfo.presentationTimeUs);
                             muxer.pumpStream(outputBuffer, mBufferInfo, false);
                         }
                     }
@@ -210,28 +210,6 @@ public class MediaAudioEncoder extends Thread {
         isEncoderStarted = false;
     }
 
-    private void startAudioRecord() {
-        // 计算AudioRecord所需输入缓存空间大小
-        EncoderParams mParams = mParamsRef.get();
-        int bufferSizeInBytes = AudioRecord.getMinBufferSize(mParams.getAudioSampleRate(), mParams.getAudioChannelConfig(),
-                mParams.getAudioFormat());
-        if (bufferSizeInBytes < 1600) {
-            bufferSizeInBytes = 1600;
-        }
-        Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO);
-        mAudioRecord = new AudioRecord(mParams.getAudioSouce(), mParams.getAudioSampleRate(),
-                mParams.getAudioChannelConfig(), mParams.getAudioFormat(), bufferSizeInBytes);
-        // 开始录音
-        mAudioRecord.startRecording();
-    }
-
-    public void stopAudioRecord() {
-        if (mAudioRecord != null) {
-            mAudioRecord.stop();
-            mAudioRecord.release();
-            mAudioRecord = null;
-        }
-    }
 
     public void exit() {
         isExit = true;
